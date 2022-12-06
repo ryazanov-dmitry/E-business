@@ -1,121 +1,123 @@
 var http = require('http');
 var fs = require('fs');
-var mustache = require('mustache');
+var Mustache = require('mustache');
+var mysql = require('./db');
+
+
 
 
 function myServerFunction(request, response) {
     if (request.url == '/freeDrones') {
         response.setHeader('Content-Type', 'application/json')
-        response.end(JSON.stringify(availableDrones))
-    }
-    if (request.url.includes('/orderDrone')) {
-        processRequest(request, response);
-        return;
-    }
-    if (request.url.includes('.html') || request.url.includes('.css')) {
-        serverStatic(request.url, response);
-        return;
-    }
-    if (request.url.includes('dynamic/')) {
-        var template = request.url.replace('/dynamic/', './templates/')
-        renderMustache(template, response);
+        mysql.queryDrones(data => {
+            response.end(JSON.stringify(data));
+        });
         return;
     }
 
-    response.end('Server is working! Please specify correct path.');
+    if (request.url == '/ordered') {
+        response.end(JSON.stringify(ordered));
+        return;
+    }
+
+    if (request.url.includes('.html') || request.url.includes('.css')) {
+        serveStatic(request.url, response);
+        return;
+    }
+
+    if (request.url.includes('/orderDrone')) {
+        var formParametersString = request.url.replace('/orderDrone', '');
+        var form = new URLSearchParams(formParametersString);
+        var droneName = form.get('droneName');
+
+        var result = dbOld.drones.find(x => x.name == droneName);
+        if (result == undefined) {
+            response.end('404');
+            return;
+        }
+
+        var index = dbOld.drones.findIndex(x => x.name == droneName);
+        dbOld.drones.splice(index, 1);
+
+        ordered.push(result);
+
+        response.end('Drone ordered!');
+        return;
+    }
+
+    if (request.url.includes('/release')) {
+        if (ordered.length == 0) {
+            response.end('No drones to release!');
+            return;
+        }
+        var drone = ordered.pop();
+        dbOld.drones.push(drone);
+        response.end(drone.name + ' released.');
+
+        return;
+    }
+
+    if (request.url.includes('dynamic')) {
+        fs.readFile('.' + request.url, function (err, fileData) {
+
+            mysql.queryDrones(data => {
+                var forMustache = {drones: data}
+                var output = Mustache.render(fileData.toString(), forMustache);
+                response.end(output);
+
+            });
+
+        });
+        return;
+    }
+
+
+    response.end('Hello world!');
 }
 
 http.createServer(myServerFunction).listen(8080);
 
-function processRequest(req, res) {
-    var form = new URLSearchParams(req.url.replace('/orderDrone', ''));
-    var droneName = form.get('droneName');
 
-    //find drone by name
-    var result = availableDrones.filter(x => x.name == droneName);
+function serveStatic(url, res) {
 
-    if (result.length === 0) {
-        res.end('No drone with such name.');
-        return;
-    }
 
-    availableDrones.splice(
-        availableDrones.findIndex(x => x.name == droneName), 1
-    );
-
-    res.end('Drone ordered!');
-}
-
-function serverStatic(url, res) {
-    fs.readFile('./static' + url, function (err, data) {
-        if (err) {
-            console.log(err.message)
-            return;
-        }
-
-        setContentType(url, res);
+    fs.readFile('./static/' + url, function (err, data) {
         res.write(data);
         return res.end();
     });
-}
-
-function renderMustache(url, res) {
-    fs.readFile(url, function (err, data) {
-        var dData = {
-            stooges: [
-                { name: "Moe" },
-                { name: "Larry" },
-                { name: "Curly" }
-            ]
-        };
-        var rendered = mustache.render(data.toString(), availableDrones);
-        res.setHeader('Content-Type', 'text/html');
-        res.write(rendered);
-        return res.end();
-    });
 
 }
 
-function setContentType(url, res) {
-    switch (url.split('.')[1]) {
-        case 'css':
-            res.setHeader('Content-Type', 'text/css');
-            return;
-        case 'html':
-            res.setHeader('Content-Type', 'text/html');
-            return;
-        default:
-            res.setHeader('Content-Type', 'text/plain');
-    }
-}
+var ordered = [];
 
-
-var availableDrones =
+var dbOld =
 {
     drones: [
         {
             name: 'BeeDrone',
-            lat: -38.71568,
-            long: 166.25189,
+            lat: -38.54543,
+            long: 166.4324,
             img: "https://images.unsplash.com/photo-1473968512647-3e447244af8f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8ZHJvbmV8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60"
+
         },
         {
             name: 'Adorable Sensors',
-            lat: 44.94397,
-            long: -45.89169,
+            lat: -43.54543,
+            long: 33.4324,
             img: "https://images.unsplash.com/photo-1508444845599-5c89863b1c44?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8ZHJvbmV8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60"
+
         },
         {
             name: 'Blue Twirls',
-            lat: -79.35272,
-            long: -69.26030,
+            lat: 15.54543,
+            long: 90.4324,
             img: "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NXx8ZHJvbmV8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60"
 
         },
         {
-            name: 'Bright Skies',
-            lat: -19.13399,
-            long: 123.54286,
+            name: 'Brigth Skies',
+            lat: 45.54543,
+            long: 166.4324,
             img: "https://images.unsplash.com/photo-1479152471347-3f2e62a2b2a7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTB8fGRyb25lfGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=500&q=60"
         }
     ]

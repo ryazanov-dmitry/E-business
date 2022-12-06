@@ -11,7 +11,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/myDroneServer.js"
+            "program": "${workspaceFolder}/mustache.js"
         }
     ]
 }

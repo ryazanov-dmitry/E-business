@@ -1,0 +1,4 @@
+docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:tag
+docker run --name myadmin -d --link mysql_db_server:db -p 8080:80 phpmyadmin
+
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password'
