@@ -1,18 +1,33 @@
 var mysql = require('mysql');
 
 exports.queryDrones = function (callback) {
-    var con = getConnection();
     const sql = 'select * from Drone where ordered = 0';
-    query(con, sql, callback);
+    query(sql, callback);
 };
 
 exports.orderDrone = function (name, callback) {
-    var con = getConnection();
     var sql = "UPDATE Drone SET ordered = 1 WHERE name = '" + name + "'";
-    query(con, sql, callback);
+    query(sql, callback);
 }
 
-function query(con, sql, callback) {
+exports.orderedCount = function (callback) {
+    var sql = "select count(*) as c from Drone where ordered = 1";
+    query(sql, callback);
+}
+
+exports.releaseDrone = function (callback) {
+    var select = "select name from Drone where ordered = 1 limit 1";
+
+    query(select, (result) => {
+        var nameToRelease = result[0].name;
+
+        var update = "UPDATE Drone SET ordered = 0 WHERE name = '" + nameToRelease + "'";
+        query(update, callback);
+    });
+}
+
+function query(sql, callback) {
+    var con = getConnection();
     con.query(sql, function (err, result) {
         if (err)
             throw err;

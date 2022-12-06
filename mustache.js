@@ -45,13 +45,18 @@ function myServerFunction(request, response) {
     }
 
     if (request.url.includes('/release')) {
-        if (ordered.length == 0) {
-            response.end('No drones to release!');
-            return;
-        }
-        var drone = ordered.pop();
-        dbOld.drones.push(drone);
-        response.end(drone.name + ' released.');
+
+        mysql.orderedCount((r) => {
+            if (r[0].c == 0) {
+                response.end('No drone to release.');
+                return;
+            }
+
+            mysql.releaseDrone((r)=>{
+                response.end('Drone released.');
+            });
+        });
+
 
         return;
     }
